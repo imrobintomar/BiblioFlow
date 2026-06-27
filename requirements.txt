@@ -1,0 +1,7 @@
+pymupdf
+pdfplumber
+rapidfuzz
+pydantic
+python-dotenv
+requests
+pybliometrics

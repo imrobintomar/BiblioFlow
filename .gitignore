@@ -1,0 +1,9 @@
+scopus_api.env
+src/cache/
+src/logs/
+src/database.sqlite
+__pycache__/
+*.pyc
+.venv/
+PDF/
+out/
