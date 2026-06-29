@@ -5,7 +5,7 @@ from dash import dcc, html
 from components import biblio_panel
 from config import WAREHOUSE_DB_PATH
 from database.connection import get_connection
-from engine import citations, countries, dataset, documents, funding, keywords, publications, references
+from engine import citations, countries, dataset, documents, funding, keywords, languages, publications, references
 from repository.project_repository import ProjectRepository
 
 dash.register_page(__name__, path="/analysis", name="Analysis")
@@ -312,6 +312,94 @@ def _document_tab(conn, project_id):
     return html.Div(panels)
 
 
+def _language_tab(conn, project_id):
+    dist = languages.language_distribution(conn, project_id)
+    growth = languages.growth_by_language(conn, project_id)
+    cit_by_lang = languages.citations_by_language(conn, project_id)
+    journals_by_lang = languages.journals_by_language(conn, project_id)
+    country_lang = languages.country_vs_language(conn, project_id)
+
+    dist_fig = go.Figure(
+        go.Pie(labels=list(dist["distribution"].keys()), values=list(dist["distribution"].values()), hole=0.4, marker_colors=_GROUP_COLORS)
+    )
+    dist_fig.update_layout(**CHART_LAYOUT)
+
+    panels = [
+        biblio_panel(
+            "lang-distribution",
+            "Language Distribution",
+            summary_rows=[
+                ("Total documents", sum(dist["distribution"].values())),
+                ("Distinct languages", len(dist["distribution"])),
+            ],
+            figure=dist_fig,
+            table_columns=["Language", "Count"],
+            table_rows=[{"Language": k, "Count": v} for k, v in dist["distribution"].items()],
+            note="Sourced from CrossRef's `language` field. A corpus that's "
+            "entirely (or mostly) one language is a real result, not a code limitation.",
+        ),
+    ]
+
+    if growth:
+        panels.append(
+            biblio_panel(
+                "lang-growth",
+                "Growth by Language",
+                figure=_stacked_bar_from_pivot(growth),
+                table_columns=["Year", "Language", "Count"],
+                table_rows=[{"Year": y, "Language": g, "Count": c} for y, gd in growth.items() for g, c in gd.items()],
+            )
+        )
+
+        evolution_fig = go.Figure()
+        langs = sorted({g for gd in growth.values() for g in gd})
+        years = sorted(growth.keys())
+        for i, lang in enumerate(langs):
+            fig_y = [growth.get(y, {}).get(lang, 0) for y in years]
+            evolution_fig.add_trace(go.Scatter(x=years, y=fig_y, mode="lines+markers", name=lang, line_color=_GROUP_COLORS[i % len(_GROUP_COLORS)]))
+        evolution_fig.update_layout(**CHART_LAYOUT)
+        panels.append(biblio_panel("lang-evolution", "Language Evolution", figure=evolution_fig))
+    else:
+        panels.append(html.Div("No year-level language data available.", className="coming-soon"))
+
+    panels.append(
+        biblio_panel(
+            "lang-citations",
+            "Citations by Language",
+            table_columns=["Language", "Papers", "Total Citations", "Avg Citations"],
+            table_rows=[
+                {"Language": k, "Papers": v["papers"], "Total Citations": v["total_citations"], "Avg Citations": v["avg_citations"]}
+                for k, v in cit_by_lang.items()
+            ],
+        )
+    )
+
+    panels.append(
+        biblio_panel(
+            "lang-journals",
+            "Journals by Language",
+            table_columns=["Language", "Distinct Journals"],
+            table_rows=[{"Language": k, "Distinct Journals": v} for k, v in journals_by_lang.items()],
+        )
+        if journals_by_lang
+        else html.Div("No journal data available.", className="coming-soon")
+    )
+
+    panels.append(
+        biblio_panel(
+            "lang-country",
+            "Country vs Language",
+            figure=_stacked_bar_from_pivot(country_lang) if country_lang else None,
+            table_columns=["Country", "Language", "Count"],
+            table_rows=[{"Country": c, "Language": g, "Count": n} for c, gd in country_lang.items() for g, n in gd.items()],
+        )
+        if country_lang
+        else html.Div("No country data available.", className="coming-soon")
+    )
+
+    return html.Div(panels)
+
+
 def _country_tab(conn, project_id):
     data = countries.top_countries(conn, project_id)
     if not data["countries"]:
@@ -411,6 +499,7 @@ def layout():
         publication_content = _publication_tab(conn, project_id)
         citation_content = _citation_tab(conn, project_id)
         document_content = _document_tab(conn, project_id)
+        language_content = _language_tab(conn, project_id)
         country_content = _country_tab(conn, project_id)
         keyword_content = _keyword_tab(conn, project_id)
         reference_content = _reference_tab(conn, project_id)
@@ -425,6 +514,7 @@ def layout():
                     dcc.Tab(label="Publication Analysis", children=[publication_content]),
                     dcc.Tab(label="Citation Analysis", children=[citation_content]),
                     dcc.Tab(label="Document Analysis", children=[document_content]),
+                    dcc.Tab(label="Language Analysis", children=[language_content]),
                     dcc.Tab(label="Country Analysis", children=[country_content]),
                     dcc.Tab(label="Keyword Analysis", children=[keyword_content]),
                     dcc.Tab(label="Reference Analysis", children=[reference_content]),

@@ -9,3 +9,6 @@ __pycache__/
 .venv/
 PDF/
 out/
+src/biblioflow.sqlite
+biblioflow.sqlite
+src/biblioflow.sqlite
