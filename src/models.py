@@ -29,6 +29,21 @@ class ExtractedRecord(BaseModel):
     doi_source: Optional[str] = None  # "metadata" | "frequency" | "position"
     doi_occurrence_pages: int = 0
 
+    # Docling-based structural/text extraction (Priority 1 -- PDF-only, free).
+    abstract: Optional[str] = None
+    keywords: list[str] = Field(default_factory=list)
+    sections: dict[str, str] = Field(default_factory=dict)
+    table_count: int = 0
+    figure_count: int = 0
+    trial_ids: list[str] = Field(default_factory=list)
+    orcid_ids: list[str] = Field(default_factory=list)
+    ethics_statement: Optional[str] = None
+    consent_statement: Optional[str] = None
+    funding_text: Optional[str] = None
+    grant_ids: list[str] = Field(default_factory=list)
+    known_funders: list[str] = Field(default_factory=list)
+    references_text_raw: Optional[str] = None
+
     @field_validator("extracted_doi")
     @classmethod
     def validate_doi_format(cls, v: Optional[str]) -> Optional[str]:
@@ -46,6 +61,10 @@ class CrossrefVerification(BaseModel):
     year: Optional[int] = None
     match_score: float = 0.0
     is_confident_match: bool = False
+    publisher: Optional[str] = None
+    page_raw: Optional[str] = None
+    document_type: Optional[str] = None
+    language: Optional[str] = None
 
 
 class ScopusRecord(BaseModel):

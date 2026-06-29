@@ -1,4 +1,6 @@
 scopus_api.env
+semantic_scholar_api.env
+api.text
 src/cache/
 src/logs/
 src/database.sqlite

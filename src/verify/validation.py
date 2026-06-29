@@ -34,4 +34,8 @@ def verify_doi(extracted: ExtractedRecord) -> CrossrefVerification | None:
         year=year,
         match_score=score,
         is_confident_match=score >= TITLE_FUZZY_MATCH_THRESHOLD,
+        publisher=record.get("publisher"),
+        page_raw=record.get("page"),
+        document_type=record.get("type"),
+        language=record.get("language"),
     )

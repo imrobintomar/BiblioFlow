@@ -5,3 +5,10 @@ pydantic
 python-dotenv
 requests
 pybliometrics
+dash
+dash-bootstrap-components
+dash-ag-grid
+plotly
+openpyxl
+docling
+pycountry
