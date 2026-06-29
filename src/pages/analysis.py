@@ -2,9 +2,10 @@ import dash
 import plotly.graph_objects as go
 from dash import dcc, html
 
+from components import biblio_panel
 from config import WAREHOUSE_DB_PATH
 from database.connection import get_connection
-from engine import citations, countries, dataset, funding, keywords, publications, references
+from engine import citations, countries, dataset, documents, funding, keywords, publications, references
 from repository.project_repository import ProjectRepository
 
 dash.register_page(__name__, path="/analysis", name="Analysis")
@@ -122,10 +123,21 @@ def _publication_tab(conn, project_id):
 
     return html.Div(
         [
-            _panel(
+            biblio_panel(
+                "pub-annual",
                 "Annual Publications",
-                fig=_bar_figure(list(pub_data["by_year"].keys()), list(pub_data["by_year"].values())),
-                text=f"CAGR / Annual Growth Rate: {pub_data['cagr_percent']}%" if pub_data["cagr_percent"] is not None else "CAGR: n/a (need 2+ years)",
+                summary_rows=[
+                    ("Timespan", f"{min(pub_data['by_year'].keys())} - {max(pub_data['by_year'].keys())}" if pub_data["by_year"] else "—"),
+                    ("Total years", len(pub_data["by_year"])),
+                    ("Total documents", sum(pub_data["by_year"].values())),
+                    (
+                        "Annual Growth Rate (CAGR)",
+                        f"{pub_data['cagr_percent']}%" if pub_data["cagr_percent"] is not None else "n/a (need 2+ years)",
+                    ),
+                ],
+                figure=_bar_figure(list(pub_data["by_year"].keys()), list(pub_data["by_year"].values())),
+                table_columns=["Year", "Documents"],
+                table_rows=[{"Year": y, "Documents": c} for y, c in pub_data["by_year"].items()],
             ),
             _panel(
                 "Monthly Publications",
@@ -158,9 +170,16 @@ def _publication_tab(conn, project_id):
                 fig=heatmap_fig,
                 note="Month-level granularity is the floor available from current sources; true day-level publication dates aren't reliably captured by any source.",
             ),
-            _panel(
+            biblio_panel(
+                "pub-growth-doctype",
                 "Growth by Document Type",
-                fig=_stacked_bar_from_pivot(by_doctype) if by_doctype else None,
+                figure=_stacked_bar_from_pivot(by_doctype),
+                table_columns=["Year", "Document Type", "Count"],
+                table_rows=[
+                    {"Year": y, "Document Type": g, "Count": c}
+                    for y, gd in by_doctype.items()
+                    for g, c in gd.items()
+                ],
             ) if by_doctype else html.Div("No document-type data available.", className="coming-soon"),
             _panel(
                 "Growth by Country",
@@ -221,6 +240,76 @@ def _citation_tab(conn, project_id):
             ),
         ]
     )
+
+
+def _document_tab(conn, project_id):
+    doctype_data = documents.document_type_distribution(conn, project_id)
+    oa_data = documents.open_access_breakdown(conn, project_id)
+    license_data = documents.license_distribution(conn, project_id)
+
+    doctype_fig = go.Figure(
+        go.Pie(
+            labels=list(doctype_data["distribution"].keys()),
+            values=list(doctype_data["distribution"].values()),
+            hole=0.4,
+            marker_colors=_GROUP_COLORS,
+        )
+    )
+    doctype_fig.update_layout(**CHART_LAYOUT)
+
+    oa_fig = go.Figure(
+        go.Pie(
+            labels=list(oa_data["by_status"].keys()),
+            values=list(oa_data["by_status"].values()),
+            hole=0.4,
+            marker_colors=_GROUP_COLORS,
+        )
+    )
+    oa_fig.update_layout(**CHART_LAYOUT)
+
+    panels = [
+        biblio_panel(
+            "doc-types",
+            "Document Types",
+            summary_rows=[
+                ("Total documents", sum(doctype_data["distribution"].values())),
+                ("Distinct types", len(doctype_data["distribution"])),
+            ],
+            figure=doctype_fig,
+            table_columns=["Document Type", "Count"],
+            table_rows=[{"Document Type": k, "Count": v} for k, v in doctype_data["distribution"].items()],
+            note="Sourced from CrossRef's `type` field, mapped to bibliometrix-style "
+            "labels (e.g. journal-article -> Article). Conference Paper/Book/Thesis/"
+            "Patent etc. will only appear if CrossRef classified the DOI that way.",
+        ),
+        biblio_panel(
+            "doc-open-access",
+            "Open Access Distribution",
+            summary_rows=[
+                ("Open Access %", f"{oa_data['open_pct']}%"),
+                ("Closed Access %", f"{oa_data['closed_pct']}%"),
+            ],
+            figure=oa_fig if oa_data["by_status"] else None,
+            table_columns=["OA Status", "Count"],
+            table_rows=[{"OA Status": k, "Count": v} for k, v in oa_data["by_status"].items()],
+            note="OA status (gold/green/hybrid/bronze/closed) sourced from Unpaywall, "
+            "with OpenAlex as fallback.",
+        ) if oa_data["by_status"] else html.Div("No open access data available.", className="coming-soon"),
+    ]
+
+    if license_data["distribution"]:
+        panels.append(
+            biblio_panel(
+                "doc-licenses",
+                "License Distribution",
+                table_columns=["License", "Count"],
+                table_rows=[{"License": k, "Count": v} for k, v in license_data["distribution"].items()],
+            )
+        )
+    else:
+        panels.append(html.Div("No license data captured yet.", className="coming-soon"))
+
+    return html.Div(panels)
 
 
 def _country_tab(conn, project_id):
@@ -321,6 +410,7 @@ def layout():
         overview_content = _overview_tab(conn, project_id)
         publication_content = _publication_tab(conn, project_id)
         citation_content = _citation_tab(conn, project_id)
+        document_content = _document_tab(conn, project_id)
         country_content = _country_tab(conn, project_id)
         keyword_content = _keyword_tab(conn, project_id)
         reference_content = _reference_tab(conn, project_id)
@@ -334,6 +424,7 @@ def layout():
                     dcc.Tab(label="Overview", children=[overview_content]),
                     dcc.Tab(label="Publication Analysis", children=[publication_content]),
                     dcc.Tab(label="Citation Analysis", children=[citation_content]),
+                    dcc.Tab(label="Document Analysis", children=[document_content]),
                     dcc.Tab(label="Country Analysis", children=[country_content]),
                     dcc.Tab(label="Keyword Analysis", children=[keyword_content]),
                     dcc.Tab(label="Reference Analysis", children=[reference_content]),

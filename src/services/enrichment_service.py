@@ -68,6 +68,8 @@ class EnrichmentService:
                 pmid=oa_data.get("pmid"),
                 oa_url=oa_data.get("oa_url"),
                 open_access=1 if oa_data.get("open_access") else None,
+                oa_status=oa_data.get("oa_status"),
+                license=oa_data.get("license"),
             )
             pmid = oa_data.get("pmid")
 
@@ -165,6 +167,8 @@ class EnrichmentService:
                     paper_id,
                     oa_url=up_data.get("oa_url"),
                     open_access=1 if up_data.get("is_oa") else None,
+                    oa_status=up_data.get("oa_status"),
+                    license=up_data.get("license"),
                 )
                 if up_data.get("oa_url"):
                     provenance.record(paper_id, "open_access", "unpaywall", "best_oa_location", 0.9)

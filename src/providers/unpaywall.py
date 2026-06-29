@@ -31,4 +31,5 @@ class UnpaywallProvider(MetadataProvider):
             "is_oa": data.get("is_oa"),
             "oa_status": data.get("oa_status"),
             "oa_url": best.get("url_for_pdf") or best.get("url"),
+            "license": best.get("license"),
         }

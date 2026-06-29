@@ -1,11 +1,13 @@
 import dash
 import dash_bootstrap_components as dbc
 from dash import Dash, html
-from flask import Response
+from flask import Response, request
 
 from components import build_sidebar, build_status_footer, build_topbar
 from data_loader import connection_status
 from services.paper_export_service import PaperExportService
+from utils import export_cache
+from utils.export_utils import rows_to_csv
 
 app = Dash(
     __name__,
@@ -56,6 +58,20 @@ def export_paper_json(paper_id: int):
         _export_service.paper_json(paper_id),
         mimetype="application/json",
         headers={"Content-Disposition": f"attachment; filename=paper_{paper_id}.json"},
+    )
+
+
+@app.server.route("/export/panel.csv")
+def export_panel_csv():
+    panel_id = request.args.get("panel", "")
+    cached = export_cache.get(panel_id)
+    if not cached:
+        return Response("Panel data not available -- reload the page and try again.", status=404)
+    columns, rows = cached
+    return Response(
+        rows_to_csv(rows, columns),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={panel_id}.csv"},
     )
 
 

@@ -73,7 +73,9 @@ class OpenAlexProvider(MetadataProvider):
             "grants": grants,
             "cited_by_count": data.get("cited_by_count"),
             "open_access": (data.get("open_access") or {}).get("is_oa"),
+            "oa_status": (data.get("open_access") or {}).get("oa_status"),
             "oa_url": (data.get("open_access") or {}).get("oa_url"),
+            "license": (data.get("primary_location") or {}).get("license"),
             "pmid": (data.get("ids") or {}).get("pmid", "").rsplit("/", 1)[-1] or None,
             "openalex_id": data.get("id"),
         }

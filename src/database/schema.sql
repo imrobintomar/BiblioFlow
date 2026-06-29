@@ -80,6 +80,8 @@ CREATE TABLE IF NOT EXISTS papers (
     funding_text_raw TEXT,
     sections_json TEXT,
     oa_url TEXT,
+    oa_status TEXT,
+    license TEXT,
     table_count INTEGER,
     figure_count INTEGER,
     pages_raw TEXT,
