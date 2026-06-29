@@ -19,8 +19,13 @@ NAV_ITEMS = [
     ("Projects", "/projects", False),
     ("Library", "/library", False),
     ("Import", "/import", False),
-    ("Analysis", "/analysis", False),
-    ("Networks", "/networks", True),
+    ("Overview", "/overview", False),
+    ("Sources", "/sources", False),
+    ("Authors", "/authors", False),
+    ("Documents", "/documents", False),
+    ("Conceptual Structure", "/conceptual-structure", False),
+    ("Social Structure", "/social-structure", False),
+    ("Intellectual Structure", "/networks", True),
     ("AI", "/ai", True),
     ("Reports & Export", "/reports", True),
     ("Settings", "/settings", False),
@@ -98,10 +103,10 @@ def stat_row(label: str, value) -> html.Div:
             "display": "flex",
             "justifyContent": "space-between",
             "padding": "5px 0",
-            "borderBottom": "1px solid #C8D9E6",
+            "borderBottom": "1px solid #7DA0CA",
             "fontSize": "13px",
         },
-        children=[html.Span(label, style={"color": "#6E8898"}), html.Span(display)],
+        children=[html.Span(label, style={"color": "#5483B3"}), html.Span(display)],
     )
 
 
@@ -123,9 +128,9 @@ def _mini_table(columns: list[str], rows: list[dict], max_rows: int = 50) -> htm
                             c,
                             style={
                                 "textAlign": "left",
-                                "borderBottom": "2px solid #C8D9E6",
+                                "borderBottom": "2px solid #7DA0CA",
                                 "padding": "4px 6px",
-                                "color": "#2F4156",
+                                "color": "#040924",
                             },
                         )
                         for c in columns
@@ -138,7 +143,7 @@ def _mini_table(columns: list[str], rows: list[dict], max_rows: int = 50) -> htm
                         [
                             html.Td(
                                 row.get(c, ""),
-                                style={"padding": "4px 6px", "borderBottom": "1px solid #C8D9E6"},
+                                style={"padding": "4px 6px", "borderBottom": "1px solid #7DA0CA"},
                             )
                             for c in columns
                         ]
@@ -178,7 +183,7 @@ def biblio_panel(
                         style={
                             "fontSize": "11px",
                             "fontWeight": "700",
-                            "color": "#6E8898",
+                            "color": "#5483B3",
                             "letterSpacing": "0.05em",
                             "marginBottom": "6px",
                         },
@@ -220,7 +225,7 @@ def biblio_panel(
         )
 
     if note:
-        children.append(html.P(note, style={"color": "#6E8898", "fontSize": "11px", "marginTop": "8px"}))
+        children.append(html.P(note, style={"color": "#5483B3", "fontSize": "11px", "marginTop": "8px"}))
 
     return html.Div(className="panel-card", children=children)
 

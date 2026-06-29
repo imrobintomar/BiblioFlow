@@ -55,7 +55,7 @@ def layout():
                             html.H3("Library", style={"marginBottom": "2px"}),
                             html.P(
                                 f"{len(rows)} paper(s) — click a row to open Paper Details.",
-                                style={"color": "#6E8898", "margin": 0},
+                                style={"color": "#5483B3", "margin": 0},
                             ),
                         ]
                     ),

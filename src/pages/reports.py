@@ -16,7 +16,7 @@ def layout():
                         "results.json, results.csv, results.bib, and a "
                         "bibliometrix-compatible Scopus CSV are written to out/ "
                         "after each pipeline run.",
-                        style={"color": "#6E8898"},
+                        style={"color": "#5483B3"},
                     ),
                 ],
             ),

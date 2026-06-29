@@ -19,7 +19,7 @@ def layout():
                 className="panel-card",
                 children=[
                     html.H5("PDF Folder"),
-                    html.P(str(PDF_DIR), style={"color": "#6E8898", "fontFamily": "monospace"}),
+                    html.P(str(PDF_DIR), style={"color": "#5483B3", "fontFamily": "monospace"}),
                     html.P(f"{len(pdf_files)} PDF(s) found"),
                     html.Ul([html.Li(p.name) for p in pdf_files]) if pdf_files else None,
                 ],
@@ -32,7 +32,7 @@ def layout():
                         "Extracts DOI/title, verifies via CrossRef, enriches via Scopus, "
                         "for any new or changed PDFs in the folder above. Runs in the "
                         "background -- this page polls for progress.",
-                        style={"color": "#6E8898"},
+                        style={"color": "#5483B3"},
                     ),
                     html.Button("Run Pipeline", id="run-pipeline-btn", className="btn btn-primary"),
                     dcc.Store(id="active-job-id"),
@@ -82,11 +82,11 @@ def poll_job(n_intervals, job_id):
 
     progress_pct = round((job["progress"] or 0) * 100)
     bar = html.Div(
-        style={"background": "#E4ECF0", "borderRadius": "6px", "overflow": "hidden", "height": "8px"},
+        style={"background": "#C1E8FF", "borderRadius": "6px", "overflow": "hidden", "height": "8px"},
         children=html.Div(
             style={
                 "width": f"{progress_pct}%",
-                "background": "#567C8D",
+                "background": "#052659",
                 "height": "100%",
             }
         ),
@@ -94,7 +94,7 @@ def poll_job(n_intervals, job_id):
 
     status_text = html.P(
         f"{job['status'].title()} — {job['message'] or ''} ({progress_pct}%)",
-        style={"color": "#6E8898", "marginTop": "8px"},
+        style={"color": "#5483B3", "marginTop": "8px"},
     )
 
     if job["status"] in ("done", "failed"):

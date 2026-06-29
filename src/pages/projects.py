@@ -36,8 +36,8 @@ def _project_card(project: dict) -> html.Div:
                     ),
                 ],
             ),
-            html.P(f"{project['paper_count']} paper(s)", style={"color": "#6E8898", "marginTop": "8px"}),
-            html.P(f"Created {project['created_at']}", style={"color": "#6E8898", "fontSize": "12px"}),
+            html.P(f"{project['paper_count']} paper(s)", style={"color": "#5483B3", "marginTop": "8px"}),
+            html.P(f"Created {project['created_at']}", style={"color": "#5483B3", "fontSize": "12px"}),
         ],
     )
 
@@ -48,7 +48,7 @@ def layout():
     event_rows = [
         html.P(
             f"{e['timestamp']} — {e['type']} ({e['status']}): {e['message']}",
-            style={"color": "#6E8898", "fontSize": "13px"},
+            style={"color": "#5483B3", "fontSize": "13px"},
         )
         for e in events
     ] or [html.P("No activity yet.", className="coming-soon")]

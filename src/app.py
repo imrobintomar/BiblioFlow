@@ -15,6 +15,11 @@ app = Dash(
     pages_folder="pages",
     external_stylesheets=[dbc.themes.FLATLY],
     title="BiblioFlow",
+    # Each page registers its own callbacks (e.g. per-page "Top N" sliders)
+    # tied to IDs that only exist on that page. Without this, Dash validates
+    # every registered callback's IDs against whichever page is currently
+    # rendered and throws "ID not found in layout" for all the others.
+    suppress_callback_exceptions=True,
 )
 
 app.layout = html.Div(

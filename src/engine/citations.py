@@ -3,7 +3,7 @@ import sqlite3
 import numpy as np
 
 
-def get_distribution(conn: sqlite3.Connection, project_id: int) -> dict:
+def get_distribution(conn: sqlite3.Connection, project_id: int, limit: int = 10) -> dict:
     rows = conn.execute(
         "SELECT title, cited_by_count FROM papers WHERE project_id = ? AND cited_by_count IS NOT NULL",
         (project_id,),
@@ -17,7 +17,7 @@ def get_distribution(conn: sqlite3.Connection, project_id: int) -> dict:
         ({"title": r["title"], "citations": r["cited_by_count"]} for r in rows),
         key=lambda x: x["citations"],
         reverse=True,
-    )[:10]
+    )[:limit]
 
     return {
         "total_citations": int(values.sum()),

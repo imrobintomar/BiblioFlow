@@ -2,7 +2,7 @@ import dash
 import plotly.graph_objects as go
 from dash import dcc, html
 
-from components import kpi_card, stat_group, status_badge
+from components import biblio_panel, kpi_card, stat_group, status_badge
 from config import WAREHOUSE_DB_PATH
 from database.connection import get_connection
 from engine import citations, dataset, journals
@@ -23,7 +23,7 @@ CHART_LAYOUT = dict(
 
 def _trend_figure(by_year: dict) -> go.Figure:
     sorted_years = sorted(by_year.keys())
-    fig = go.Figure(go.Bar(x=sorted_years, y=[by_year[y] for y in sorted_years], marker_color="#567C8D"))
+    fig = go.Figure(go.Bar(x=sorted_years, y=[by_year[y] for y in sorted_years], marker_color="#052659"))
     fig.update_layout(**CHART_LAYOUT)
     return fig
 
@@ -57,10 +57,10 @@ def _recent_imports(papers: list[dict]) -> list[html.Div]:
                     "display": "flex",
                     "justifyContent": "space-between",
                     "padding": "8px 0",
-                    "borderBottom": "1px solid #C8D9E6",
+                    "borderBottom": "1px solid #7DA0CA",
                 },
                 children=[
-                    html.Span(p["filename"], style={"color": "#2F4156", "fontSize": "13px"}),
+                    html.Span(p["filename"], style={"color": "#040924", "fontSize": "13px"}),
                     status_badge(p["status"]),
                 ],
             )
@@ -166,32 +166,35 @@ def layout():
                                     html.Div(quality_group, style={"flex": 1, "minWidth": "280px"}),
                                 ],
                             ),
-                            html.Div(
+                            biblio_panel(
+                                "dash-publication-trend",
+                                "Publication Trend",
+                                figure=_trend_figure(pub_data["by_year"]) if pub_data["by_year"] else None,
+                                table_columns=["Year", "Documents"],
+                                table_rows=[{"Year": y, "Documents": c} for y, c in pub_data["by_year"].items()],
+                            ) if pub_data["by_year"] else html.Div(
                                 className="panel-card",
-                                children=[
-                                    html.H5("Publication Trend"),
-                                    dcc.Graph(figure=_trend_figure(pub_data["by_year"]), config={"displayModeBar": False})
-                                    if pub_data["by_year"]
-                                    else html.P("No dated papers yet.", className="coming-soon"),
-                                ],
+                                children=[html.H5("Publication Trend"), html.P("No dated papers yet.", className="coming-soon")],
                             ),
-                            html.Div(
+                            biblio_panel(
+                                "dash-top-journals",
+                                "Top Journals",
+                                figure=_journals_figure(journal_data["journals"]) if journal_data["journals"] else None,
+                                table_columns=["Journal", "Papers"],
+                                table_rows=[{"Journal": j["journal"], "Papers": j["papers"]} for j in journal_data["journals"]],
+                            ) if journal_data["journals"] else html.Div(
                                 className="panel-card",
-                                children=[
-                                    html.H5("Top Journals"),
-                                    dcc.Graph(figure=_journals_figure(journal_data["journals"]), config={"displayModeBar": False})
-                                    if journal_data["journals"]
-                                    else html.P("No journal data yet.", className="coming-soon"),
-                                ],
+                                children=[html.H5("Top Journals"), html.P("No journal data yet.", className="coming-soon")],
                             ),
-                            html.Div(
+                            biblio_panel(
+                                "dash-citation-distribution",
+                                "Citation Distribution (Top Cited)",
+                                figure=_citation_histogram(cit_data["top_cited"]) if cit_data["top_cited"] else None,
+                                table_columns=["Title", "Citations"],
+                                table_rows=[{"Title": p["title"], "Citations": p["citations"]} for p in cit_data["top_cited"]],
+                            ) if cit_data["top_cited"] else html.Div(
                                 className="panel-card",
-                                children=[
-                                    html.H5("Citation Distribution (Top Cited)"),
-                                    dcc.Graph(figure=_citation_histogram(cit_data["top_cited"]), config={"displayModeBar": False})
-                                    if cit_data["top_cited"]
-                                    else html.P("No citation data yet.", className="coming-soon"),
-                                ],
+                                children=[html.H5("Citation Distribution (Top Cited)"), html.P("No citation data yet.", className="coming-soon")],
                             ),
                         ],
                     ),
@@ -212,7 +215,7 @@ def layout():
                                         [
                                             html.P(
                                                 f"{e['timestamp']} — {e['type']}: {e['message']}",
-                                                style={"color": "#6E8898", "fontSize": "12px"},
+                                                style={"color": "#5483B3", "fontSize": "12px"},
                                             )
                                             for e in events
                                         ]

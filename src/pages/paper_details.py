@@ -10,9 +10,9 @@ dash.register_page(__name__, path_template="/paper/<paper_id>", name="Paper Deta
 
 def _field(label: str, value) -> html.Div:
     return html.Div(
-        style={"padding": "8px 0", "borderBottom": "1px solid #C8D9E6"},
+        style={"padding": "8px 0", "borderBottom": "1px solid #7DA0CA"},
         children=[
-            html.Span(label, style={"color": "#6E8898", "fontSize": "12px", "display": "block"}),
+            html.Span(label, style={"color": "#5483B3", "fontSize": "12px", "display": "block"}),
             html.Span(value if value not in (None, "", []) else "—", style={"fontSize": "14px"}),
         ],
     )
@@ -30,7 +30,7 @@ def layout(paper_id: str | None = None):
 
     return html.Div(
         [
-            html.A("← Back to Library", href="/library", style={"color": "#567C8D"}),
+            html.A("← Back to Library", href="/library", style={"color": "#052659"}),
             html.H3(paper.get("title") or "(untitled)", style={"marginTop": "10px"}),
             html.Div(
                 className="panel-card",
