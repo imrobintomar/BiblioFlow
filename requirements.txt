@@ -12,3 +12,4 @@ plotly
 openpyxl
 docling
 pycountry
+networkx

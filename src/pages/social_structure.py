@@ -1,37 +1,113 @@
 import dash
-from dash import html
+from dash import dcc, html
 from dash.dependencies import Input, Output
 
 from components import biblio_panel
 from config import WAREHOUSE_DB_PATH
 from database.connection import get_connection
-from engine import countries
-from pages.analysis_shared import bar_figure, top_n_control
+from engine import countries, social_networks
+from engine.network_utils import centrality_table, detect_communities, graph_figure, network_metrics
+from pages.analysis_shared import bar_figure, stacked_bar_from_pivot, top_n_control
 from repository.project_repository import ProjectRepository
 
 dash.register_page(__name__, path="/social-structure", name="Social Structure")
+
+_NETWORK_NOTES = {
+    "author": "Edge = two authors appearing on the same paper.",
+    "institution": "Edge = two institutions appearing on the same paper.",
+    "country": "Edge = two countries appearing on the same paper (via institution affiliations).",
+}
+
+
+def _country_section(conn, project_id, top_n):
+    data = countries.top_countries(conn, project_id, limit=top_n)
+    if not data["countries"]:
+        return [html.Div(data["note"], className="coming-soon")]
+
+    fig = bar_figure([c["papers"] for c in data["countries"]], [c["country"] for c in data["countries"]], orientation="h")
+    return [
+        biblio_panel(
+            "social-countries",
+            "Most Productive Countries",
+            summary_rows=[("Distinct countries shown", len(data["countries"]))],
+            figure=fig,
+            table_columns=["Country", "Papers"],
+            table_rows=[{"Country": c["country"], "Papers": c["papers"]} for c in data["countries"]],
+        )
+    ]
+
+
+def _network_section(conn, project_id, network_type, panel_prefix):
+    graph, _ = social_networks.build_social_network(conn, project_id, network_type)
+    if graph.number_of_nodes() == 0:
+        return [html.Div("No data available for this network.", className="coming-soon")]
+
+    communities = detect_communities(graph)
+    fig = graph_figure(graph, communities)
+    metrics = network_metrics(graph)
+    centrality = centrality_table(graph)
+
+    return [
+        biblio_panel(
+            f"{panel_prefix}-network",
+            f"{network_type.title()} Collaboration Network",
+            summary_rows=[
+                ("Nodes", metrics["nodes"]),
+                ("Edges", metrics["edges"]),
+                ("Density", metrics["density"]),
+                ("Connected components", metrics["connected_components"]),
+                ("Communities detected (Louvain)", len(set(communities.values())) if communities else 0),
+                ("Clustering coefficient", metrics["clustering_coefficient"]),
+                ("Diameter (largest component)", metrics["diameter"]),
+                ("Avg path length (largest component)", metrics["average_path_length"]),
+            ],
+            figure=fig,
+            table_columns=["Node", "Degree", "Betweenness", "Closeness", "Eigenvector", "PageRank"],
+            table_rows=[
+                {
+                    "Node": c["node"], "Degree": c["degree"], "Betweenness": c["betweenness"],
+                    "Closeness": c["closeness"], "Eigenvector": c["eigenvector"], "PageRank": c["pagerank"],
+                }
+                for c in centrality
+            ],
+            note=_NETWORK_NOTES.get(network_type, ""),
+        )
+    ]
+
+
+def _timeline_section(conn, project_id):
+    timeline = social_networks.collaboration_timeline(conn, project_id)
+    if not timeline:
+        return [html.Div("No year-level collaboration data available.", className="coming-soon")]
+
+    return [
+        biblio_panel(
+            "social-collab-timeline",
+            "Collaboration Timeline (Single vs Multi-institution Papers)",
+            figure=stacked_bar_from_pivot(timeline),
+            table_columns=["Year", "Type", "Papers"],
+            table_rows=[{"Year": y, "Type": t, "Papers": c} for y, td in timeline.items() for t, c in td.items()],
+        )
+    ]
 
 
 def _render(top_n: int):
     with get_connection(WAREHOUSE_DB_PATH) as conn:
         project_id = ProjectRepository(conn).get_or_create_default("")
-        data = countries.top_countries(conn, project_id, limit=top_n)
+        country_panels = _country_section(conn, project_id, top_n)
+        author_net_panels = _network_section(conn, project_id, "author", "social-author")
+        institution_net_panels = _network_section(conn, project_id, "institution", "social-institution")
+        country_net_panels = _network_section(conn, project_id, "country", "social-country")
+        timeline_panels = _timeline_section(conn, project_id)
 
-    if not data["countries"]:
-        return html.Div(data["note"], className="coming-soon")
-
-    fig = bar_figure([c["papers"] for c in data["countries"]], [c["country"] for c in data["countries"]], orientation="h")
-
-    return biblio_panel(
-        "social-countries",
-        "Country Collaboration / Most Productive Countries",
-        summary_rows=[("Distinct countries shown", len(data["countries"]))],
-        figure=fig,
-        table_columns=["Country", "Papers"],
-        table_rows=[{"Country": c["country"], "Papers": c["papers"]} for c in data["countries"]],
-        note="Collaboration network maps and SCP/MCP collaboration-type breakdowns "
-        "(biblioshiny's full Social Structure suite) are a future milestone -- this "
-        "view shows paper counts per country (via institution affiliations) today.",
+    return dcc.Tabs(
+        [
+            dcc.Tab(label="Countries", children=country_panels),
+            dcc.Tab(label="Author Network", children=author_net_panels),
+            dcc.Tab(label="Institution Network", children=institution_net_panels),
+            dcc.Tab(label="Country Network", children=country_net_panels),
+            dcc.Tab(label="Collaboration Timeline", children=timeline_panels),
+        ]
     )
 
 

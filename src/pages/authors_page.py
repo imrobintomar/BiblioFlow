@@ -5,21 +5,19 @@ from dash.dependencies import Input, Output
 from components import biblio_panel
 from config import WAREHOUSE_DB_PATH
 from database.connection import get_connection
-from engine import authors
+from engine import authors, institutions
 from pages.analysis_shared import bar_figure, stacked_bar_from_pivot, top_n_control
 from repository.project_repository import ProjectRepository
 
 dash.register_page(__name__, path="/authors", name="Authors")
 
 
-def _render(top_n: int):
-    with get_connection(WAREHOUSE_DB_PATH) as conn:
-        project_id = ProjectRepository(conn).get_or_create_default("")
-        top = authors.top_authors(conn, project_id, limit=top_n)
-        timeline = authors.productivity_timeline(conn, project_id, limit=8)
-        collab = authors.collaboration_stats(conn, project_id, limit=top_n)
-        career = authors.career_stats(conn, project_id, limit=top_n)
-        local_cit = authors.local_citations(conn, project_id)
+def _author_section(conn, project_id, top_n):
+    top = authors.top_authors(conn, project_id, limit=top_n)
+    timeline = authors.productivity_timeline(conn, project_id, limit=8)
+    collab = authors.collaboration_stats(conn, project_id, limit=top_n)
+    career = authors.career_stats(conn, project_id, limit=top_n)
+    local_cit = authors.local_citations(conn, project_id)
 
     productivity_fig = bar_figure([a["author"] for a in top["authors"]], [a["papers"] for a in top["authors"]], orientation="h")
 
@@ -113,7 +111,121 @@ def _render(top_n: int):
         )
     )
 
-    return html.Div(panels)
+    return panels
+
+
+def _institution_section(conn, project_id, top_n):
+    top = institutions.top_institutions(conn, project_id, limit=top_n)
+    growth = institutions.institution_growth(conn, project_id, limit=min(top_n, 8))
+    impact = institutions.citation_impact(conn, project_id)
+    collab = institutions.collaboration(conn, project_id, limit=top_n)
+    researchers = institutions.top_researchers(conn, project_id, limit=top_n)
+    timeline = institutions.publication_timeline(conn, project_id)
+    country_dist = institutions.country_distribution(conn, project_id)
+    funding_dist = institutions.funding_distribution(conn, project_id, limit=top_n)
+
+    if not top["institutions"]:
+        return [html.Div("No institution data available.", className="coming-soon")]
+
+    top_fig = bar_figure([i["papers"] for i in top["institutions"]], [i["institution"] for i in top["institutions"]], orientation="h")
+
+    panels = [
+        biblio_panel(
+            "inst-most-productive", "Most Productive Institutions",
+            summary_rows=[
+                ("Total documents", sum(i["papers"] for i in top["institutions"])),
+                ("Distinct institutions", len(top["institutions"])),
+            ],
+            figure=top_fig,
+            table_columns=["Institution", "Papers"],
+            table_rows=top["institutions"],
+        ),
+    ]
+
+    if growth:
+        panels.append(
+            biblio_panel(
+                "inst-growth", "Institution Growth",
+                figure=stacked_bar_from_pivot(growth),
+                table_columns=["Year", "Institution", "Papers"],
+                table_rows=[{"Year": y, "Institution": g, "Papers": c} for y, gd in growth.items() for g, c in gd.items()],
+            )
+        )
+
+    panels.append(
+        biblio_panel(
+            "inst-citation-impact", "Institutional Citation Impact (incl. Institutional H-index)",
+            table_columns=["Institution", "Papers", "Total Citations", "Avg Citations", "H-index"],
+            table_rows=[
+                {"Institution": k, "Papers": v["papers"], "Total Citations": v["total_citations"], "Avg Citations": v["avg_citations"], "H-index": v["h_index"]}
+                for k, v in impact.items()
+            ],
+        )
+    )
+
+    panels.append(
+        biblio_panel(
+            "inst-collaboration", "Institution Collaboration (Network Edge Counts)",
+            table_columns=["Institution", "Co-occurring Institutions"],
+            table_rows=collab["collaboration"],
+            note="Counts of distinct institutions appearing on a shared paper -- the "
+            "underlying edge list for an institution network. Rendering this as an "
+            "actual graph is a future Network Analysis milestone.",
+        )
+    )
+
+    panels.append(
+        biblio_panel(
+            "inst-researchers", "Top Researchers per Institution",
+            table_columns=["Institution", "Distinct Researchers"],
+            table_rows=researchers["researchers"],
+            note="Paper-level proxy: counts authors on any paper linked to this "
+            "institution, not true author-to-institution attribution -- the schema "
+            "links papers (not individual authors) to institutions.",
+        )
+    )
+
+    panels.append(
+        biblio_panel(
+            "inst-timeline", "Publication Timeline",
+            table_columns=["Institution", "First Year", "Last Year"],
+            table_rows=[{"Institution": k, "First Year": v["first_year"], "Last Year": v["last_year"]} for k, v in timeline.items()],
+        )
+    )
+
+    panels.append(
+        biblio_panel(
+            "inst-country", "Country Distribution",
+            table_columns=["Institution", "Country"],
+            table_rows=[{"Institution": k, "Country": v} for k, v in country_dist.items()],
+        )
+    )
+
+    panels.append(
+        biblio_panel(
+            "inst-funding", "Funding Distribution",
+            table_columns=["Institution", "Funders"],
+            table_rows=[{"Institution": f["institution"], "Funders": ", ".join(f["funders"])} for f in funding_dist["funding"]],
+            note="Paper-level proxy: funders on any paper linked to this institution -- "
+            "the schema has no direct institution-to-funder edge.",
+        ) if funding_dist["funding"] else html.Div("No funding data linked to institutions yet.", className="coming-soon")
+    )
+
+    return panels
+
+
+def _render(top_n: int):
+    with get_connection(WAREHOUSE_DB_PATH) as conn:
+        project_id = ProjectRepository(conn).get_or_create_default("")
+        author_panels = _author_section(conn, project_id, top_n)
+        institution_panels = _institution_section(conn, project_id, top_n)
+
+    return dcc.Tabs(
+        [
+            dcc.Tab(label="Authors", children=author_panels),
+            dcc.Tab(label="Institutions (Affiliations)", children=institution_panels),
+        ]
+    )
 
 
 def layout():
