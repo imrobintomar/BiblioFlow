@@ -119,6 +119,10 @@ cd src
 
 Pipeline state is tracked in `src/database.sqlite` so re-runs skip unchanged PDFs unless `--force` is passed. Use `--no-scopus` to skip the Scopus stage. The warehouse DB (`src/biblioflow.sqlite`) is fully derived/rebuildable from the legacy state — safe to delete and re-migrate.
 
+## Design
+
+See [`VISUALIZATION_GUIDELINES.md`](VISUALIZATION_GUIDELINES.md) for the chart-type-per-analysis reference (e.g. Treemap for Journals/Publishers, Bubble for Authors/Institutions, Choropleth for Countries) and the grid-layout principle — several existing pages still default to horizontal bar charts and are a known retrofit target against that guide, not yet executed.
+
 ## Author
 
 Robin Tomar ([itsrobintomar@gmail.com](mailto:itsrobintomar@gmail.com))

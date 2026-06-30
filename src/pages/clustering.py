@@ -5,7 +5,8 @@ from components import biblio_panel
 from config import WAREHOUSE_DB_PATH
 from database.connection import get_connection
 from engine import clustering
-from engine.network_utils import centrality_table, detect_communities, graph_figure, network_metrics
+from engine.network_utils import centrality_table, detect_communities, network_metrics
+from visualizations.network import network_chart
 from repository.project_repository import ProjectRepository
 
 dash.register_page(__name__, path="/clustering", name="Clustering")
@@ -36,7 +37,7 @@ def _network_panel(conn, project_id, network_type):
         return html.Div(f"No data available for {label}. {note}", className="coming-soon")
 
     communities = detect_communities(graph)
-    fig = graph_figure(graph, communities)
+    fig = network_chart(graph, communities)
     metrics = network_metrics(graph)
     centrality = centrality_table(graph)
 

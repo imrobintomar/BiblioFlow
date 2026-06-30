@@ -6,10 +6,21 @@ from components import biblio_panel
 from config import WAREHOUSE_DB_PATH
 from database.connection import get_connection
 from engine import dataset, publications
-from pages.analysis_shared import CHART_LAYOUT, bar_figure, stacked_bar_from_pivot
+from pages.analysis_shared import CHART_LAYOUT
 from repository.project_repository import ProjectRepository
+from visualizations.area import area_chart
+from visualizations.calendar import calendar_heatmap
+from visualizations.line import line_chart
 
 dash.register_page(__name__, path="/overview", name="Overview")
+
+
+def _pivot_to_series(pivot: dict) -> tuple[list, dict]:
+    """{year: {group: count}} -> (sorted_years, {group: [count_per_year]})"""
+    years = sorted(pivot.keys())
+    groups = sorted({g for yd in pivot.values() for g in yd})
+    series = {g: [pivot.get(y, {}).get(g, 0) for y in years] for g in groups}
+    return years, series
 
 
 def _overview_tab(conn, project_id):
@@ -64,10 +75,7 @@ def _publication_tab(conn, project_id):
         else forecast["note"]
     )
 
-    heatmap_fig = go.Figure(
-        go.Heatmap(z=heat["matrix"], x=heat["months"], y=heat["years"], colorscale="Blues")
-    )
-    heatmap_fig.update_layout(**CHART_LAYOUT)
+    heatmap_fig = calendar_heatmap(heat["matrix"], heat["months"], heat["years"], title="Publications by Year x Month")
 
     def _panel(title, fig=None, text=None, note=None):
         children = [html.H5(title)]
@@ -93,22 +101,22 @@ def _publication_tab(conn, project_id):
                         f"{pub_data['cagr_percent']}%" if pub_data["cagr_percent"] is not None else "n/a (need 2+ years)",
                     ),
                 ],
-                figure=bar_figure(list(pub_data["by_year"].keys()), list(pub_data["by_year"].values())),
+                figure=line_chart(list(pub_data["by_year"].keys()), {"Documents": list(pub_data["by_year"].values())}),
                 table_columns=["Year", "Documents"],
                 table_rows=[{"Year": y, "Documents": c} for y, c in pub_data["by_year"].items()],
             ) if pub_data["by_year"] else html.Div("No dated papers yet.", className="coming-soon"),
             _panel(
                 "Monthly Publications",
-                fig=bar_figure(list(monthly["by_month"].keys()), list(monthly["by_month"].values())) if monthly["by_month"] else None,
+                fig=line_chart(list(monthly["by_month"].keys()), {"Documents": list(monthly["by_month"].values())}) if monthly["by_month"] else None,
                 note="Scopus often supplies only year-01-01 when the exact month is unknown -- monthly data may look artificially clustered in January.",
             ) if monthly["by_month"] else html.Div("No month-level data available.", className="coming-soon"),
             _panel(
                 "Quarterly Publications",
-                fig=bar_figure(list(quarterly["by_quarter"].keys()), list(quarterly["by_quarter"].values())) if quarterly["by_quarter"] else None,
+                fig=line_chart(list(quarterly["by_quarter"].keys()), {"Documents": list(quarterly["by_quarter"].values())}) if quarterly["by_quarter"] else None,
             ) if quarterly["by_quarter"] else html.Div("No quarter-level data available.", className="coming-soon"),
             _panel(
                 "Publications per Decade",
-                fig=bar_figure(list(decade["by_decade"].keys()), list(decade["by_decade"].values())),
+                fig=line_chart(list(decade["by_decade"].keys()), {"Documents": list(decade["by_decade"].values())}),
             ),
             _panel(
                 "Moving Average",
@@ -131,21 +139,21 @@ def _publication_tab(conn, project_id):
             biblio_panel(
                 "ov-growth-doctype",
                 "Growth by Document Type",
-                figure=stacked_bar_from_pivot(by_doctype),
+                figure=area_chart(*_pivot_to_series(by_doctype)),
                 table_columns=["Year", "Document Type", "Count"],
                 table_rows=[{"Year": y, "Document Type": g, "Count": c} for y, gd in by_doctype.items() for g, c in gd.items()],
             ) if by_doctype else html.Div("No document-type data available.", className="coming-soon"),
             _panel(
                 "Growth by Country",
-                fig=stacked_bar_from_pivot(by_country) if by_country else None,
+                fig=area_chart(*_pivot_to_series(by_country)) if by_country else None,
             ) if by_country else html.Div("No country data available.", className="coming-soon"),
             _panel(
                 "Growth by Institution (Top 8)",
-                fig=stacked_bar_from_pivot(by_institution) if by_institution else None,
+                fig=area_chart(*_pivot_to_series(by_institution)) if by_institution else None,
             ) if by_institution else html.Div("No institution data available.", className="coming-soon"),
             _panel(
                 "Growth by Journal",
-                fig=stacked_bar_from_pivot(by_journal) if by_journal else None,
+                fig=area_chart(*_pivot_to_series(by_journal)) if by_journal else None,
             ) if by_journal else html.Div("No journal data available.", className="coming-soon"),
         ]
     )

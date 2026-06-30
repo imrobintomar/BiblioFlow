@@ -12,3 +12,4 @@ out/
 src/biblioflow.sqlite
 biblioflow.sqlite
 src/biblioflow.sqlite
+VISUALIZATION_GUIDELINES.md

@@ -5,9 +5,11 @@ from dash.dependencies import Input, Output
 from components import biblio_panel
 from config import WAREHOUSE_DB_PATH
 from database.connection import get_connection
-from engine import authors, institutions
-from pages.analysis_shared import bar_figure, stacked_bar_from_pivot, top_n_control
+from engine import authors, countries, institutions, publications
+from pages.analysis_shared import stacked_bar_from_pivot, top_n_control
 from repository.project_repository import ProjectRepository
+from visualizations.bubble import bubble_chart
+from visualizations.worldmap import choropleth_chart
 
 dash.register_page(__name__, path="/authors", name="Authors")
 
@@ -19,7 +21,15 @@ def _author_section(conn, project_id, top_n):
     career = authors.career_stats(conn, project_id, limit=top_n)
     local_cit = authors.local_citations(conn, project_id)
 
-    productivity_fig = bar_figure([a["author"] for a in top["authors"]], [a["papers"] for a in top["authors"]], orientation="h")
+    productivity_fig = bubble_chart(
+        labels=[a["author"] for a in top["authors"]],
+        x=[a["papers"] for a in top["authors"]],
+        y=[a["total_citations"] for a in top["authors"]],
+        size=[a["h_index"] + 1 for a in top["authors"]],
+        title="Papers vs Citations (bubble size = H-index)",
+        x_title="Papers",
+        y_title="Total Citations",
+    )
 
     panels = [
         biblio_panel(
@@ -127,7 +137,15 @@ def _institution_section(conn, project_id, top_n):
     if not top["institutions"]:
         return [html.Div("No institution data available.", className="coming-soon")]
 
-    top_fig = bar_figure([i["papers"] for i in top["institutions"]], [i["institution"] for i in top["institutions"]], orientation="h")
+    top_fig = bubble_chart(
+        labels=[i["institution"] for i in top["institutions"]],
+        x=[i["papers"] for i in top["institutions"]],
+        y=[impact.get(i["institution"], {}).get("total_citations", 0) for i in top["institutions"]],
+        size=[impact.get(i["institution"], {}).get("h_index", 0) + 1 for i in top["institutions"]],
+        title="Papers vs Citations (bubble size = H-index)",
+        x_title="Papers",
+        y_title="Total Citations",
+    )
 
     panels = [
         biblio_panel(
@@ -214,16 +232,65 @@ def _institution_section(conn, project_id, top_n):
     return panels
 
 
+def _country_section(conn, project_id, top_n):
+    """Matches biblioshiny's Authors sub-items: Countries' Scientific
+    Production, Countries' Production over Time, Most Cited Countries.
+    ('Corresponding Author's Countries' isn't implemented -- we don't flag
+    a corresponding author, so country counts here are per all affiliations.)"""
+    top = countries.top_countries(conn, project_id, limit=top_n)
+    most_cited = countries.most_cited_countries(conn, project_id, limit=top_n)
+    growth = publications.growth_by_country(conn, project_id)
+
+    if not top["countries"]:
+        return [html.Div(top["note"], className="coming-soon")]
+
+    fig = choropleth_chart([c["country"] for c in top["countries"]], [c["papers"] for c in top["countries"]], title="Countries' Scientific Production")
+
+    panels = [
+        biblio_panel(
+            "auth-country-production", "Countries' Scientific Production",
+            summary_rows=[("Distinct countries", len(top["countries"]))],
+            figure=fig,
+            table_columns=["Country", "Papers"],
+            table_rows=top["countries"],
+            note="Per-paper affiliation country, not corresponding-author-only "
+            "(BiblioFlow doesn't currently flag which author corresponds).",
+        ),
+    ]
+
+    if growth:
+        panels.append(
+            biblio_panel(
+                "auth-country-over-time", "Countries' Production over Time",
+                figure=stacked_bar_from_pivot(growth),
+                table_columns=["Year", "Country", "Count"],
+                table_rows=[{"Year": y, "Country": g, "Count": c} for y, gd in growth.items() for g, c in gd.items()],
+            )
+        )
+
+    panels.append(
+        biblio_panel(
+            "auth-most-cited-countries", "Most Cited Countries",
+            table_columns=["Country", "Total Citations"],
+            table_rows=most_cited["countries"],
+        )
+    )
+
+    return panels
+
+
 def _render(top_n: int):
     with get_connection(WAREHOUSE_DB_PATH) as conn:
         project_id = ProjectRepository(conn).get_or_create_default("")
         author_panels = _author_section(conn, project_id, top_n)
         institution_panels = _institution_section(conn, project_id, top_n)
+        country_panels = _country_section(conn, project_id, top_n)
 
     return dcc.Tabs(
         [
             dcc.Tab(label="Authors", children=author_panels),
-            dcc.Tab(label="Institutions (Affiliations)", children=institution_panels),
+            dcc.Tab(label="Affiliations", children=institution_panels),
+            dcc.Tab(label="Countries", children=country_panels),
         ]
     )
 

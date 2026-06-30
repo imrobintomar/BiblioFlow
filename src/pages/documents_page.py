@@ -9,6 +9,8 @@ from database.connection import get_connection
 from engine import citations, funding, references
 from pages.analysis_shared import CHART_LAYOUT, top_n_control
 from repository.project_repository import ProjectRepository
+from visualizations.boxplot import boxplot_chart
+from visualizations.histogram import histogram_chart
 
 dash.register_page(__name__, path="/documents", name="Documents")
 
@@ -25,14 +27,6 @@ def _citation_section(conn, project_id, limit):
     )
     hist_fig.update_layout(**CHART_LAYOUT)
 
-    percentile_rows = [
-        html.Div(
-            style={"display": "flex", "justifyContent": "space-between", "padding": "6px 0"},
-            children=[html.Span(k.upper()), html.Span(str(v))],
-        )
-        for k, v in cit_data["percentiles"].items()
-    ]
-
     return [
         html.Div(
             className="panel-card",
@@ -43,7 +37,18 @@ def _citation_section(conn, project_id, limit):
                 html.P(f"Median: {cit_data['median']}"),
             ],
         ),
-        html.Div(className="panel-card", children=[html.H5("Citation Percentiles"), *percentile_rows]),
+        biblio_panel(
+            "doc-citation-distribution", "Citation Distribution",
+            figure=histogram_chart(cit_data["citation_values"], title="Citations per Document") if cit_data["citation_values"] else None,
+            table_columns=["Citations"],
+            table_rows=[{"Citations": v} for v in cit_data["citation_values"]],
+        ) if cit_data["citation_values"] else html.Div("No citation data yet.", className="coming-soon"),
+        biblio_panel(
+            "doc-citation-percentiles", "Citation Percentiles",
+            figure=boxplot_chart({"All Documents": cit_data["citation_values"]}, title="Citation Spread") if cit_data["citation_values"] else None,
+            table_columns=["Percentile", "Value"],
+            table_rows=[{"Percentile": k.upper(), "Value": v} for k, v in cit_data["percentiles"].items()],
+        ) if cit_data["percentiles"] else html.Div("No percentile data yet.", className="coming-soon"),
         biblio_panel(
             "doc-most-cited", "Most Global Cited Documents",
             figure=hist_fig if cit_data["top_cited"] else None,

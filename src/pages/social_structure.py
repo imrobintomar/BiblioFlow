@@ -6,10 +6,14 @@ from components import biblio_panel
 from config import WAREHOUSE_DB_PATH
 from database.connection import get_connection
 from engine import countries, social_networks
-from engine.network_utils import centrality_table, detect_communities, graph_figure, network_metrics
-from pages.analysis_shared import bar_figure, stacked_bar_from_pivot, top_n_control
+from engine.network_utils import centrality_table, detect_communities, network_metrics
+from pages.analysis_shared import stacked_bar_from_pivot, top_n_control
 from repository.project_repository import ProjectRepository
+from visualizations.network import network_chart
+from visualizations.worldmap import choropleth_chart
 
+# Matches biblioshiny's real Social Structure scope (collabNetwork,
+# collabWorldMap) -- country production counts live under Authors, not here.
 dash.register_page(__name__, path="/social-structure", name="Social Structure")
 
 _NETWORK_NOTES = {
@@ -19,16 +23,18 @@ _NETWORK_NOTES = {
 }
 
 
-def _country_section(conn, project_id, top_n):
+def _collab_worldmap_section(conn, project_id, top_n):
+    """Matches biblioshiny's collabWorldMap -- collaboration intensity by
+    country (paper count via institution affiliation), shown as a map."""
     data = countries.top_countries(conn, project_id, limit=top_n)
     if not data["countries"]:
         return [html.Div(data["note"], className="coming-soon")]
 
-    fig = bar_figure([c["papers"] for c in data["countries"]], [c["country"] for c in data["countries"]], orientation="h")
+    fig = choropleth_chart([c["country"] for c in data["countries"]], [c["papers"] for c in data["countries"]], title="Collaboration World Map")
     return [
         biblio_panel(
-            "social-countries",
-            "Most Productive Countries",
+            "social-collab-worldmap",
+            "Collaboration World Map",
             summary_rows=[("Distinct countries shown", len(data["countries"]))],
             figure=fig,
             table_columns=["Country", "Papers"],
@@ -43,7 +49,7 @@ def _network_section(conn, project_id, network_type, panel_prefix):
         return [html.Div("No data available for this network.", className="coming-soon")]
 
     communities = detect_communities(graph)
-    fig = graph_figure(graph, communities)
+    fig = network_chart(graph, communities)
     metrics = network_metrics(graph)
     centrality = centrality_table(graph)
 
@@ -94,18 +100,18 @@ def _timeline_section(conn, project_id):
 def _render(top_n: int):
     with get_connection(WAREHOUSE_DB_PATH) as conn:
         project_id = ProjectRepository(conn).get_or_create_default("")
-        country_panels = _country_section(conn, project_id, top_n)
         author_net_panels = _network_section(conn, project_id, "author", "social-author")
         institution_net_panels = _network_section(conn, project_id, "institution", "social-institution")
         country_net_panels = _network_section(conn, project_id, "country", "social-country")
+        worldmap_panels = _collab_worldmap_section(conn, project_id, top_n)
         timeline_panels = _timeline_section(conn, project_id)
 
     return dcc.Tabs(
         [
-            dcc.Tab(label="Countries", children=country_panels),
             dcc.Tab(label="Author Network", children=author_net_panels),
             dcc.Tab(label="Institution Network", children=institution_net_panels),
             dcc.Tab(label="Country Network", children=country_net_panels),
+            dcc.Tab(label="Collaboration World Map", children=worldmap_panels),
             dcc.Tab(label="Collaboration Timeline", children=timeline_panels),
         ]
     )

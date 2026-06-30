@@ -10,7 +10,7 @@ def get_distribution(conn: sqlite3.Connection, project_id: int, limit: int = 10)
     ).fetchall()
 
     if not rows:
-        return {"total_citations": 0, "average": 0, "median": 0, "percentiles": {}, "top_cited": []}
+        return {"total_citations": 0, "average": 0, "median": 0, "percentiles": {}, "top_cited": [], "citation_values": []}
 
     values = np.array([r["cited_by_count"] for r in rows])
     top_cited = sorted(
@@ -30,4 +30,5 @@ def get_distribution(conn: sqlite3.Connection, project_id: int, limit: int = 10)
             "p90": round(float(np.percentile(values, 90)), 2),
         },
         "top_cited": top_cited,
+        "citation_values": [int(v) for v in values],
     }

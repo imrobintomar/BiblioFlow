@@ -7,8 +7,9 @@ from components import biblio_panel
 from config import WAREHOUSE_DB_PATH
 from database.connection import get_connection
 from engine import documents, journals, languages, publishers
-from pages.analysis_shared import CHART_LAYOUT, GROUP_COLORS, bar_figure, stacked_bar_from_pivot, top_n_control
+from pages.analysis_shared import CHART_LAYOUT, GROUP_COLORS, stacked_bar_from_pivot, top_n_control
 from repository.project_repository import ProjectRepository
+from visualizations.treemap import treemap_chart
 
 dash.register_page(__name__, path="/sources", name="Sources")
 
@@ -25,7 +26,7 @@ def _journal_section(conn, project_id, limit):
     if not top["journals"]:
         return [html.Div("No journal data available.", className="coming-soon")]
 
-    top_fig = bar_figure([j["papers"] for j in top["journals"]], [j["journal"] for j in top["journals"]], orientation="h")
+    top_fig = treemap_chart([j["journal"] for j in top["journals"]], [j["papers"] for j in top["journals"]], title="Journals by Paper Count")
 
     panels = [
         biblio_panel(
@@ -98,7 +99,7 @@ def _publisher_section(conn, project_id, limit):
     if not top["publishers"]:
         return [html.Div("No publisher data available -- requires CrossRef's `publisher` field.", className="coming-soon")]
 
-    top_fig = bar_figure([p["papers"] for p in top["publishers"]], [p["publisher"] for p in top["publishers"]], orientation="h")
+    top_fig = treemap_chart([p["publisher"] for p in top["publishers"]], [p["papers"] for p in top["publishers"]], title="Publishers by Paper Count")
 
     panels = [
         biblio_panel(
