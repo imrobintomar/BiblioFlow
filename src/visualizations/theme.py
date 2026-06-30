@@ -31,6 +31,9 @@ BASE_LAYOUT = dict(
 )
 
 # Minimal mode bar -- keeps the PNG download (camera) button, drops the rest.
+# scale=3 means the downloaded PNG renders at 3x the on-screen pixel
+# dimensions (print/publication quality), exceeding a typical browser
+# screenshot or a default-resolution chart export.
 CHART_DOWNLOAD_CONFIG = {
     "displayModeBar": True,
     "displaylogo": False,
@@ -39,6 +42,11 @@ CHART_DOWNLOAD_CONFIG = {
         "autoScale2d", "resetScale2d", "hoverClosestCartesian",
         "hoverCompareCartesian", "toggleSpikelines",
     ],
+    "toImageButtonOptions": {
+        "format": "png",
+        "scale": 3,
+        "filename": "biblioflow-chart",
+    },
 }
 
 

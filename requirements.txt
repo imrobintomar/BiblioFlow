@@ -13,3 +13,4 @@ openpyxl
 docling
 pycountry
 networkx
+geonamescache

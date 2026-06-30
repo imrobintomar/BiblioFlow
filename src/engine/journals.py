@@ -52,6 +52,30 @@ def top_journals(conn: sqlite3.Connection, project_id: int, limit: int = 10) -> 
     return {"journals": journals}
 
 
+def bradford_curve_data(conn: sqlite3.Connection, project_id: int) -> dict:
+    """All journals ranked by productivity (no limit, unlike top_journals),
+    with running cumulative paper count -- the data a real Bradford rank-
+    frequency curve needs."""
+    all_journals = top_journals(conn, project_id, limit=10_000)["journals"]
+    if not all_journals:
+        return {"sources": [], "cumulative": [], "core_count": 0}
+
+    cumulative = []
+    running = 0
+    core_count = 0
+    for j in all_journals:
+        running += j["papers"]
+        cumulative.append(running)
+        if j["bradford_zone"] == "Zone 1":
+            core_count += 1
+
+    return {
+        "sources": [j["journal"] for j in all_journals],
+        "cumulative": cumulative,
+        "core_count": core_count,
+    }
+
+
 def core_journals(conn: sqlite3.Connection, project_id: int) -> dict:
     """Bradford's Law 'core' (Zone 1) journals -- the small set responsible
     for roughly a third of the corpus's output."""

@@ -110,7 +110,7 @@ def _publisher_section(conn, project_id, limit):
             ],
             figure=top_fig,
             table_columns=["Publisher", "Papers"],
-            table_rows=top["publishers"],
+            table_rows=[{"Publisher": p["publisher"], "Papers": p["papers"]} for p in top["publishers"]],
         ),
     ]
     if growth:

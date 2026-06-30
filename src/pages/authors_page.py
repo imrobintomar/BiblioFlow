@@ -156,7 +156,7 @@ def _institution_section(conn, project_id, top_n):
             ],
             figure=top_fig,
             table_columns=["Institution", "Papers"],
-            table_rows=top["institutions"],
+            table_rows=[{"Institution": i["institution"], "Papers": i["papers"]} for i in top["institutions"]],
         ),
     ]
 
@@ -185,7 +185,7 @@ def _institution_section(conn, project_id, top_n):
         biblio_panel(
             "inst-collaboration", "Institution Collaboration (Network Edge Counts)",
             table_columns=["Institution", "Co-occurring Institutions"],
-            table_rows=collab["collaboration"],
+            table_rows=[{"Institution": c["institution"], "Co-occurring Institutions": c["co_institutions"]} for c in collab["collaboration"]],
             note="Counts of distinct institutions appearing on a shared paper -- the "
             "underlying edge list for an institution network. Rendering this as an "
             "actual graph is a future Network Analysis milestone.",
@@ -196,7 +196,7 @@ def _institution_section(conn, project_id, top_n):
         biblio_panel(
             "inst-researchers", "Top Researchers per Institution",
             table_columns=["Institution", "Distinct Researchers"],
-            table_rows=researchers["researchers"],
+            table_rows=[{"Institution": r["institution"], "Distinct Researchers": r["distinct_researchers"]} for r in researchers["researchers"]],
             note="Paper-level proxy: counts authors on any paper linked to this "
             "institution, not true author-to-institution attribution -- the schema "
             "links papers (not individual authors) to institutions.",

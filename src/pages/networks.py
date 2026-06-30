@@ -42,7 +42,7 @@ def layout():
             "intel-historiograph",
             "Historiograph / Citation Tree (Local Citations, Chronological)",
             table_columns=["Title", "Year"],
-            table_rows=historiograph["nodes_by_year"],
+            table_rows=[{"Title": n["title"], "Year": n["year"]} for n in historiograph["nodes_by_year"]],
             note=historiograph["note"],
         )
         if historiograph["nodes_by_year"]

@@ -1,18 +1,7 @@
 from dash import dcc, html
 
 from utils import export_cache
-
-# Minimal Plotly mode bar -- keeps the PNG download (camera) button, drops
-# the rest, consistent with biblioshiny's per-panel "download image" action.
-CHART_DOWNLOAD_CONFIG = {
-    "displayModeBar": True,
-    "displaylogo": False,
-    "modeBarButtonsToRemove": [
-        "zoom2d", "pan2d", "select2d", "lasso2d", "zoomIn2d", "zoomOut2d",
-        "autoScale2d", "resetScale2d", "hoverClosestCartesian",
-        "hoverCompareCartesian", "toggleSpikelines",
-    ],
-}
+from visualizations.theme import CHART_DOWNLOAD_CONFIG
 
 # BiblioFlow-only extras (not part of biblioshiny's own menu) -- the data
 # pipeline entry points, kept at the top.
