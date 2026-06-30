@@ -252,7 +252,7 @@ def _country_section(conn, project_id, top_n):
             summary_rows=[("Distinct countries", len(top["countries"]))],
             figure=fig,
             table_columns=["Country", "Papers"],
-            table_rows=top["countries"],
+            table_rows=[{"Country": c["country"], "Papers": c["papers"]} for c in top["countries"]],
             note="Per-paper affiliation country, not corresponding-author-only "
             "(BiblioFlow doesn't currently flag which author corresponds).",
         ),
@@ -272,7 +272,7 @@ def _country_section(conn, project_id, top_n):
         biblio_panel(
             "auth-most-cited-countries", "Most Cited Countries",
             table_columns=["Country", "Total Citations"],
-            table_rows=most_cited["countries"],
+            table_rows=[{"Country": c["country"], "Total Citations": c["total_citations"]} for c in most_cited["countries"]],
         )
     )
 

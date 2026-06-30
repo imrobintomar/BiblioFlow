@@ -23,6 +23,12 @@ def layout():
                          " exports the full dataset as CSV/Excel."],
                         style={"color": "#5483B3"},
                     ),
+                    html.P(
+                        "The CLI pipeline (python src/pipeline.py) also writes results.json, "
+                        "results.csv, results.bib, and a bibliometrix-compatible Scopus CSV "
+                        "to out/ after each run.",
+                        style={"color": "#5483B3"},
+                    ),
                 ],
             ),
         ]

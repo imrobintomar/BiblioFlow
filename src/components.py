@@ -14,23 +14,46 @@ CHART_DOWNLOAD_CONFIG = {
     ],
 }
 
-NAV_ITEMS = [
+# BiblioFlow-only extras (not part of biblioshiny's own menu) -- the data
+# pipeline entry points, kept at the top.
+_BIBLIOFLOW_EXTRAS_TOP = [
     ("Dashboard", "/", False),
     ("Projects", "/projects", False),
     ("Library", "/library", False),
     ("Import", "/import", False),
+]
+
+# Mirrors biblioshiny's real top-level sidebar sequence exactly (verified
+# against a live biblioshiny instance's rendered HTML), so the two apps are
+# directly comparable. Affiliations/Countries are sub-tabs inside "Authors"
+# in both apps, not separate top-level items -- matches biblioshiny's actual
+# nesting, not the flatter guess from an earlier pass.
+_BIBLIOSHINY_PARITY = [
+    ("Data", "/data", False),
+    ("API", "/api", False),
+    ("Filters", "/filters", True),
+    ("PRISMA Diagram", "/prisma", True),
     ("Overview", "/overview", False),
     ("Sources", "/sources", False),
     ("Authors", "/authors", False),
     ("Documents", "/documents", False),
-    ("Clustering", "/clustering", False),
     ("Conceptual Structure", "/conceptual-structure", False),
     ("Intellectual Structure", "/networks", False),
     ("Social Structure", "/social-structure", False),
+    ("Report", "/report", True),
+    ("TALL Export", "/tall-export", True),
+    ("Content Analysis", "/content-analysis", True),
+]
+
+# BiblioFlow-only extras beyond biblioshiny's scope, kept at the bottom.
+_BIBLIOFLOW_EXTRAS_BOTTOM = [
+    ("Clustering", "/clustering", False),
     ("AI", "/ai", True),
-    ("Reports & Export", "/reports", True),
+    ("Info", "/info", False),
     ("Settings", "/settings", False),
 ]
+
+NAV_ITEMS = _BIBLIOFLOW_EXTRAS_TOP + _BIBLIOSHINY_PARITY + _BIBLIOFLOW_EXTRAS_BOTTOM
 
 
 def build_topbar() -> html.Div:
